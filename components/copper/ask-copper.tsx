@@ -9,6 +9,8 @@ import {
   ArrowRightIcon,
   ArrowUpIcon,
   BrainIcon,
+  ExternalLinkIcon,
+  FileTextIcon,
   MessageCircleIcon,
   TriangleAlertIcon,
   WrenchIcon,
@@ -148,7 +150,7 @@ export function AskCopper({ aiConfigured }: { aiConfigured: boolean }) {
                   Ask Copper
                 </SheetTitle>
                 <SheetDescription className="text-xs text-white/70">
-                  Prices, totals and stock, checked with tools.
+                  Prices, stock and help from Copper&apos;s guides.
                 </SheetDescription>
               </div>
               <SheetClose asChild>
@@ -197,8 +199,9 @@ export function AskCopper({ aiConfigured }: { aiConfigured: boolean }) {
                   <div className="space-y-2">
                     {turns.length === 0 && (
                       <p className="text-muted-foreground text-sm">
-                        Hi, I&apos;m Copper! Ask me about prices, totals or
-                        stock. Try one of these:
+                        Hi, I&apos;m Copper! Ask me about prices, stock,
+                        setup, troubleshooting or our policies. Try one of
+                        these:
                       </p>
                     )}
                     {STARTERS.map((starter) => (
@@ -225,7 +228,7 @@ export function AskCopper({ aiConfigured }: { aiConfigured: boolean }) {
                   aria-label="Your question"
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder="Ask about prices or stock…"
+                  placeholder="Ask about prices, setup or policies…"
                   className="bg-background focus-visible:ring-ring h-10 flex-1 rounded-full border px-4 text-sm outline-none focus-visible:ring-2"
                 />
                 <Button
@@ -583,6 +586,41 @@ function ToolOutput({ name, output }: { name: string; output: any }) {
             </div>
           ))}
       </div>
+    );
+  if (name === "search_docs" && Array.isArray(output?.passages))
+    return (
+      <ol data-testid="doc-passages" className="space-y-2 text-xs">
+        {output.passages.map((p: any, i: number) => (
+          <li
+            key={`${p.link}-${i}`}
+            className="bg-background rounded-lg border px-2.5 py-2"
+          >
+            <div className="flex items-center gap-2">
+              <span className="bg-accent/15 text-accent flex size-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold">
+                {i + 1}
+              </span>
+              <a
+                href={p.link}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary inline-flex min-w-0 items-center gap-1 font-semibold hover:underline"
+              >
+                <FileTextIcon className="size-3 shrink-0" />
+                <span className="truncate">{p.title}</span>
+                <span className="shrink-0">· p. {p.page}</span>
+                <ExternalLinkIcon className="size-3 shrink-0" />
+              </a>
+              <span
+                title="How close this passage is to the question"
+                className="text-muted-foreground ml-auto shrink-0 font-mono text-[10px]"
+              >
+                {Math.round(p.score * 100)}%
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-1 line-clamp-3">{p.text}</p>
+          </li>
+        ))}
+      </ol>
     );
   if (name === "check_availability" && output?.status) {
     if (output.status === "unavailable")

@@ -111,3 +111,13 @@ the result into memory when it starts, ready for Ask Copper to search.
 | Loader | `lib/copper/passages.ts` | `getPassages()`: the passages, imported once so they stay in memory |
 | Embedding calls | `lib/ai/call.ts` | `callEmbedMany` / `callEmbed`: `google/gemini-embedding-001`, 768 dimensions, `RETRIEVAL_DOCUMENT` for passages and `RETRIEVAL_QUERY` for questions; logged to `ai_calls` |
 | AI calls | `{ module: 3, feature: "passages" }` | One per batch when the script runs; none while the app runs |
+
+### Module 3: search_docs (retrieval)
+
+| Piece | Where | What it does |
+|---|---|---|
+| Search | `lib/copper/search.ts` | `searchDocs(query)`: embeds the question (`RETRIEVAL_QUERY`), scores every passage by cosine similarity and returns the top 5 as `{ title, page, link, text, score }`. `link` is the PDF path plus `#page=N`, so it opens at that page |
+| Tool | `lib/copper/assistant/tools.ts` | `search_docs`, Ask Copper's fifth tool, for setup, troubleshooting, error codes, warranty, refunds, privacy and policy questions |
+| Instructions | `lib/copper/assistant/instructions.ts` | Copper calls `search_docs` for those questions, answers only from the passages and cites "(Document, p. N)"; if nothing fits, it says so and points to the Copper Crew |
+| Tool card | `components/copper/ask-copper.tsx` | Lists the 5 passages: title, page (link to the PDF page), closeness score and a short excerpt |
+| AI calls | `{ module: 3, feature: "search-docs" }` | One embedding call per search, plus the usual `ask-copper` streamed call |
