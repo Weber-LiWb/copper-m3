@@ -96,3 +96,18 @@ each step. Module 3 teaches it to answer from the customer documents.
 | Instructions | `lib/copper/assistant/instructions.ts` | `COPPER_INSTRUCTIONS`. Copper says it can't help yet with warranty, setup, troubleshooting or privacy |
 | Data | `lib/copper/inventory.ts`, `lib/copper/documents.ts` | Stock from `lib/copper/data/inventory.json`; `DOCUMENTS`: the four customer documents and their PDF paths under `public/docs/`. The PDFs are added in class |
 | AI calls | `{ module: 2, feature: "ask-copper" }` | One streamed call per question |
+
+## Module 3: document passages and embeddings
+
+**Summary:** the four customer PDFs in `public/docs/` are cut into passages of
+a few sentences (each keeps its document title and page number, and its text
+starts with the title) and embedded with Gemini ahead of time. The app loads
+the result into memory when it starts, ready for Ask Copper to search.
+
+| Piece | Where | What it does |
+|---|---|---|
+| Build script | `scripts/build-passages.ts` (`npm run passages`) | Reads each PDF page with `unpdf`, splits it into passages of up to 3 sentences (600 characters max), embeds them in batches of 90 (free tier: 100 a minute) and writes the JSON. Re-run when the PDFs change |
+| Data | `lib/copper/data/passages.json` | `{ model, dimensions, passages: [{ id, docId, title, page, text, embedding }] }` |
+| Loader | `lib/copper/passages.ts` | `getPassages()`: the passages, imported once so they stay in memory |
+| Embedding calls | `lib/ai/call.ts` | `callEmbedMany` / `callEmbed`: `google/gemini-embedding-001`, 768 dimensions, `RETRIEVAL_DOCUMENT` for passages and `RETRIEVAL_QUERY` for questions; logged to `ai_calls` |
+| AI calls | `{ module: 3, feature: "passages" }` | One per batch when the script runs; none while the app runs |

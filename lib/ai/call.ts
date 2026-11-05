@@ -1,5 +1,5 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { generateText, Output, streamText } from "ai";
+import { embedMany, generateText, Output, streamText } from "ai";
 import type { z } from "zod";
 import { defaultModel, MODELS, type ModelId } from "@/lib/ai/models";
 import { costUsd } from "@/lib/ai/pricing";
@@ -36,7 +36,7 @@ type TextOptions = DistributiveOmit<
 export type AiCallRow = {
   module: number;
   feature: string;
-  model: ModelId;
+  model: ModelId | typeof EMBEDDING_MODEL;
   input_tokens: number | null;
   output_tokens: number | null;
   cost_usd: number | null;
@@ -145,6 +145,71 @@ export function callStream(info: CallInfo, options: StreamOptions) {
     onFinish: ({ totalUsage }) => logCall(row(true, totalUsage)),
     onError: () => logCall(row(false)),
   });
+}
+
+// Embeddings: turn text into a list of numbers, so texts with similar
+// meaning get similar numbers. Same Google AI Studio key as the chat models.
+export const EMBEDDING_MODEL = "google/gemini-embedding-001";
+/** 768 numbers per text: Google's smaller size, nearly as accurate as 3072. */
+export const EMBEDDING_DIMENSIONS = 768;
+// US dollars per million input tokens (Google's list price, 2026-10).
+const EMBEDDING_PRICE = 0.15;
+
+/** What the text is for: a passage to search, or a question searching them. */
+export type EmbeddingTask = "RETRIEVAL_DOCUMENT" | "RETRIEVAL_QUERY";
+
+/**
+ * Embeds many texts at once (sent in batches of up to 100), logged to
+ * ai_calls like every other call. Read the vectors from `result.embeddings`.
+ * Example: callEmbedMany({ module: 3, feature: "passages" }, texts, "RETRIEVAL_DOCUMENT")
+ */
+export async function callEmbedMany(
+  info: Omit<CallInfo, "model">,
+  values: string[],
+  taskType: EmbeddingTask,
+) {
+  const googleKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim();
+  if (!googleKey) throw new AiNotConfiguredError();
+  const started = performance.now();
+  const row = (ok: boolean, tokens?: number): AiCallRow => ({
+    module: info.module,
+    feature: info.feature,
+    model: EMBEDDING_MODEL,
+    input_tokens: tokens ?? null,
+    output_tokens: tokens === undefined ? null : 0,
+    cost_usd: tokens === undefined ? null : (tokens * EMBEDDING_PRICE) / 1e6,
+    latency_ms: Math.round(performance.now() - started),
+    ok,
+    created_at: new Date().toISOString(),
+  });
+  try {
+    const result = await embedMany({
+      model: createGoogleGenerativeAI({ apiKey: googleKey }).embedding(
+        EMBEDDING_MODEL.slice("google/".length),
+      ),
+      values,
+      maxParallelCalls: 1,
+      maxRetries: 0,
+      providerOptions: {
+        google: { taskType, outputDimensionality: EMBEDDING_DIMENSIONS },
+      },
+    });
+    await logCall(row(true, result.usage?.tokens));
+    return result;
+  } catch (error) {
+    await logCall(row(false));
+    throw error;
+  }
+}
+
+/** Embeds one text, e.g. a customer's question. Returns its vector. */
+export async function callEmbed(
+  info: Omit<CallInfo, "model">,
+  value: string,
+  taskType: EmbeddingTask,
+): Promise<number[]> {
+  const { embeddings } = await callEmbedMany(info, [value], taskType);
+  return embeddings[0];
 }
 
 // Asking for some thinking (rather than letting the model decide) is what
