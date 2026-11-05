@@ -204,7 +204,7 @@ export const copperTools = {
   }),
   search_docs: tool({
     description:
-      "Searches Copper's customer documents (Copper Home and Copper Notes user guides, the Terms and Conditions, the Copper Plus FAQ) and returns the 5 most relevant passages, each with its document title, page number and a link to that page. Use it for setup, troubleshooting, error codes, warranty, returns, refunds, privacy and other policy questions.",
+      "Searches Copper's customer documents (Copper Home and Copper Notes user guides, the Terms and Conditions, the Copper Plus FAQ) and returns the 5 most relevant passages, each with its document title, page number and a link to that page. Use it for setup, troubleshooting, error codes, what a device can or can't do, warranty, returns, refunds, privacy and other policy questions.",
     inputSchema: z.object({
       query: z
         .string()
