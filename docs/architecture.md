@@ -121,3 +121,11 @@ the result into memory when it starts, ready for Ask Copper to search.
 | Instructions | `lib/copper/assistant/instructions.ts` | Copper calls `search_docs` for those questions, answers only from the passages and cites "(Document, p. N)"; if nothing fits, it says so and points to the Copper Crew |
 | Tool card | `components/copper/ask-copper.tsx` | Lists the 5 passages: title, page (link to the PDF page), closeness score and a short excerpt |
 | AI calls | `{ module: 3, feature: "search-docs" }` | One embedding call per search, plus the usual `ask-copper` streamed call |
+
+### Module 3: grounded answers with citations
+
+| Piece | Where | What it does |
+|---|---|---|
+| Rules | `lib/copper/assistant/instructions.ts` | Support questions are answered only from `search_docs` passages; every sentence ends with `[Document title, p. N]`; if nothing fits, Copper replies `NOT_FOUND` ("I couldn't find that in our support docs") and points to the Copper Crew |
+| Citation links | `lib/copper/citations.ts` | `splitCitations(reply)` finds `[Title, p. N]` for known documents and builds `/docs/<file>.pdf#page=N`; unknown titles stay plain text |
+| Reply | `components/copper/ask-copper.tsx` | `ReplyText` draws each citation as a small link chip that opens the PDF at that page |

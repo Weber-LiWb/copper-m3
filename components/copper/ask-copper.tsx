@@ -36,6 +36,7 @@ import {
   TOOL_LABELS,
 } from "@/lib/copper/assistant/progress";
 import { formatUsd, getPlans, getProducts } from "@/lib/copper/catalog";
+import { splitCitations } from "@/lib/copper/citations";
 import { cn } from "@/lib/utils";
 
 const STARTERS = [
@@ -385,8 +386,8 @@ function Answer({
               </p>
             </div>
           )}
-          <p className="text-sm whitespace-pre-wrap">
-            {reply}
+          <p data-testid="reply" className="text-sm whitespace-pre-wrap">
+            <ReplyText text={reply} />
             {working && (
               <span className="bg-primary ml-0.5 inline-block h-4 w-0.5 animate-pulse align-middle" />
             )}
@@ -443,6 +444,31 @@ function InlineMarkdown({ text }: { text: string }) {
       );
     return part;
   });
+}
+
+/**
+ * Copper's reply, with each citation like [Copper Home User Guide, p. 9]
+ * turned into a link that opens the PDF at that page.
+ */
+function ReplyText({ text }: { text: string }) {
+  return splitCitations(text).map((part, i) =>
+    typeof part === "string" ? (
+      <InlineMarkdown key={i} text={part} />
+    ) : (
+      <a
+        key={i}
+        data-testid="citation"
+        href={part.href}
+        target="_blank"
+        rel="noreferrer"
+        title={`Open ${part.title} at page ${part.page}`}
+        className="bg-primary/10 text-primary hover:bg-primary/20 mx-0.5 inline-flex items-center gap-0.5 rounded px-1 align-baseline text-xs font-semibold whitespace-nowrap no-underline"
+      >
+        <FileTextIcon className="size-3" />
+        {part.title}, p. {part.page}
+      </a>
+    ),
+  );
 }
 
 function ToolCard({ step, number }: { step: ToolStep; number: number }) {
